@@ -4,6 +4,29 @@ A comprehensive healthcare data management and analytics application simulating 
 
 ---
 
+### Advanced Technology Stack & Core Competencies
+
+[![Python 3.12](https://img.shields.io/badge/Python-3.12_Advanced_OOP-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![Flask 3.0](https://img.shields.io/badge/Flask-3.0_Application_Factory-000000?style=for-the-badge&logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
+[![Oracle Database 23c](https://img.shields.io/badge/Oracle_DB-23c_Free_%7C_Thin_Mode-F80000?style=for-the-badge&logo=oracle&logoColor=white)](https://www.oracle.com/database/free/)
+[![Oracle PL/SQL](https://img.shields.io/badge/PL%2FSQL-Stored_Packages_%26_Cursors-C74634?style=for-the-badge&logo=oracle&logoColor=white)](https://www.oracle.com/database/technologies/appdev/plsql.html)
+[![Pandas 2.1](https://img.shields.io/badge/Pandas-2.1_Data_Pipelines-150458?style=for-the-badge&logo=pandas&logoColor=white)](https://pandas.pydata.org/)
+[![Tableau Public](https://img.shields.io/badge/Tableau_Public-Interactive_BI-E97627?style=for-the-badge&logo=tableau&logoColor=white)](https://public.tableau.com/)
+[![Pytest](https://img.shields.io/badge/Pytest-55_Automated_Tests-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white)](https://pytest.org/)
+[![Bootstrap 5](https://img.shields.io/badge/Bootstrap-5.3_Responsive_UI-7952B3?style=for-the-badge&logo=bootstrap&logoColor=white)](https://getbootstrap.com/)
+
+| Architectural Tier | Technologies | Advanced Engineering Implementation |
+| :--- | :--- | :--- |
+| **Backend Framework** | **Python 3.12**, **Flask 3.0** | Clean Architecture, Repository Pattern, Application Factory, Parameterized RESTful routing, custom exception middleware |
+| **Database Engine** | **Oracle Database Free (23c / 21c)**, **`python-oracledb`** | Native Thin Mode connectivity, Identity Sequences, Composite Unique Constraints, Check Constraints, B-Tree Indexes |
+| **Database Programming** | **Oracle SQL**, **PL/SQL** | Stored Procedures, Stored Functions, `SYS_REFCURSOR` dynamic output, Package Specifications & Bodies (`PKG_HEALTHCARE_REPORTING`), CTEs, Window Aggregates |
+| **Financial Arithmetic** | **`decimal.Decimal`** | Exact monetary calculation avoiding IEEE 754 binary floating-point drift, `ROUND_HALF_UP` quantization, strict ledger reconciliation rules |
+| **Data Analytics & BI** | **Pandas 2.1+**, **Tableau Public** | Automated reporting pipelines, accounts receivable aging segmentation, longitudinal patient history, interactive BI dashboards |
+| **Testing & Verification** | **Pytest 8.2**, **Pytest-Cov** | 55 automated unit & integration tests (100% pass rate), in-memory isolation harness, atomic transaction rollback verification |
+| **Clinical UI** | **HTML5**, **CSS3**, **Bootstrap 5.3**, **Chart.js** | Responsive clinical portal, asynchronous AJAX interactions, modal encounter & scheduling forms, real-time KPI graphs |
+
+---
+
 ## 1. Architecture Overview
 
 The application follows a layered design that separates presentation, business logic, data access, and storage.
@@ -55,19 +78,7 @@ flowchart TD
 
 ---
 
-## 2. Technology Stack
-
-- **Backend:** Python 3.12, Flask 3.0
-- **Database:** Oracle Database Free (23c / 21c) via `python-oracledb` (Thin Mode), with SQLite fallback for local testing
-- **Database Programming:** SQL, PL/SQL (Procedures, Functions, Packages)
-- **Data Analysis:** Pandas 2.1+
-- **Business Intelligence:** Tableau Public
-- **Testing:** Pytest 8.2 (55 automated tests)
-- **Frontend:** HTML5, CSS3, JavaScript, Bootstrap 5.3, Chart.js
-
----
-
-## 3. Core Functional Modules
+## 2. Core Functional Modules
 
 ### Module 1: Patient Management
 - Patient registration with automatic Medical Record Number (`MRN-XXXXX`) generation.
@@ -92,7 +103,7 @@ flowchart TD
 
 ---
 
-## 4. Database Schema Design
+## 3. Database Schema Design
 
 The schema is normalized to Third Normal Form (3NF) and consists of five core tables:
 
@@ -111,7 +122,7 @@ Complete schema documentation and data dictionaries are available in [docs/datab
 
 ---
 
-## 5. SQL & PL/SQL Objects
+## 4. SQL & PL/SQL Objects
 
 Database objects are organized in the `database/` directory:
 
@@ -123,7 +134,7 @@ Database objects are organized in the `database/` directory:
 
 ---
 
-## 6. Operational Reports
+## 5. Operational Reports
 
 Five SQL-driven operational reports address hospital administrative requirements:
 
@@ -139,7 +150,7 @@ Reports are accessible through the web UI, REST API endpoints (`/api/reports/*`)
 
 ---
 
-## 7. Tableau Public Dashboard
+## 6. Tableau Public Dashboard
 
 Data exported from the database (`tableau/exports/full_synthetic_dataset.csv`) supports an interactive Tableau dashboard containing:
 
@@ -154,7 +165,7 @@ Step-by-step instructions and calculated field formulas are detailed in [tableau
 
 ---
 
-## 8. REST API Reference
+## 7. REST API Reference
 
 The application provides a comprehensive REST API. Full documentation with JSON request/response examples is located in [docs/api_documentation.md](docs/api_documentation.md).
 
@@ -183,7 +194,7 @@ The application provides a comprehensive REST API. Full documentation with JSON 
 
 ---
 
-## 9. Testing & Quality Assurance
+## 8. Testing & Quality Assurance
 
 The test suite contains **55 automated tests** built with Pytest covering validation logic, service workflows, API endpoints, and database constraint enforcement.
 
@@ -201,7 +212,7 @@ All 55 tests pass without warnings or errors.
 
 ---
 
-## 10. Setup & Execution
+## 9. Setup & Execution
 
 ### Prerequisites
 - Python 3.10+
@@ -269,7 +280,7 @@ All 55 tests pass without warnings or errors.
 
 ---
 
-## 11. Documentation Links
+## 10. Documentation Links
 
 - [Database Design & Data Dictionary](docs/database_design.md)
 - [REST API Documentation](docs/api_documentation.md)
@@ -280,7 +291,7 @@ All 55 tests pass without warnings or errors.
 
 ---
 
-## 12. Security & Compliance Notes
+## 11. Security & Compliance Notes
 
 - **Synthetic Data:** All patient records, physician names, and medical details are entirely fictional. No real Protected Health Information (PHI) is used.
 - **SQL Injection Prevention:** All SQL statements use parameterized queries across repositories.
