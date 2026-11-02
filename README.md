@@ -1,44 +1,38 @@
-# Healthcare Data Management and Analytics System (HealthPulse)
+# Healthcare Data Management and Analytics System
 
-[![Python 3.12](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/)
-[![Flask 3.0](https://img.shields.io/badge/Framework-Flask_3.0-green.svg)](https://flask.palletsprojects.com/)
-[![Database](https://img.shields.io/badge/Database-Oracle_Free_%2F_SQLite-red.svg)](https://www.oracle.com/database/free/)
-[![Tests](https://img.shields.io/badge/Tests-55_Passed_%28100%25%29-brightgreen.svg)](https://pytest.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-
-An enterprise-grade, end-to-end healthcare data management and analytics platform simulating authentic hospital operations. The system orchestrates patient registration, physician scheduling, provider slot conflict prevention, clinical documentation (SOAP progress notes & ICD-10 coding), and accounts receivable billing with IEEE 754-safe exact decimal arithmetic.
+A comprehensive healthcare data management and analytics application simulating hospital operational workflows. The system manages patient demographic records, provider scheduling, clinical documentation, and billing cycles, providing SQL-driven operational reports and Tableau analytics.
 
 ---
 
-## 1. System Architecture
+## 1. Architecture Overview
 
-HealthPulse implements a clean, decoupled layered architecture separating HTTP routing, domain business logic, data access repositories, and database storage engines.
+The application follows a layered design that separates presentation, business logic, data access, and storage.
 
 ```mermaid
 flowchart TD
-    Client["Client / Web Browser / Tableau Public"]
+    Client["Web Browser / Tableau Public"]
     
-    subgraph Presentation_Layer ["Presentation & Routing Layer"]
-        UI["Bootstrap 5 Responsive UI<br/>(Dashboard, Patients, Appointments, Encounters, Billing, Reports)"]
-        API["Flask REST API Controllers<br/>(/api/patients, /api/appointments, /api/encounters, /api/billing, /api/reports)"]
+    subgraph Presentation_Layer ["Presentation & API Layer"]
+        UI["Web Interface (Bootstrap 5, Jinja2)"]
+        API["Flask REST API Controllers"]
     end
 
-    subgraph Business_Layer ["Domain Service Layer"]
-        PatientSvc["PatientService<br/>(Duplicate Detection, MRN Generation)"]
-        ApptSvc["AppointmentService<br/>(Provider Slot Conflict Detection)"]
-        EncounterSvc["EncounterService<br/>(Clinical Workflow, Auto-Charge)"]
-        BillingSvc["BillingService<br/>(Exact Decimal Payment Reconciler)"]
-        ReportSvc["ReportService<br/>(Pandas Analytics & CSV Exporter)"]
+    subgraph Business_Layer ["Service Layer"]
+        PatientSvc["PatientService"]
+        ApptSvc["AppointmentService"]
+        EncounterSvc["EncounterService"]
+        BillingSvc["BillingService"]
+        ReportSvc["ReportService"]
     end
 
-    subgraph Data_Access_Layer ["Repository & Storage Layer"]
-        Repo["Data Access Repositories<br/>(Parameterized SQL)"]
-        DBMgr["DatabaseManager (db.py)<br/>Dual-Engine: Oracle Thin Mode / SQLite Fallback"]
+    subgraph Data_Access_Layer ["Data Access Layer"]
+        Repo["Repositories (Parameterized SQL)"]
+        DBMgr["DatabaseManager (Oracle Thin Mode / SQLite Fallback)"]
     end
 
     subgraph Storage_Layer ["Database Layer"]
-        OracleDB[("Oracle Database Free 23c/21c<br/>(Tables, Views, PL/SQL Packages)")]
-        SQLiteDB[("SQLite Engine<br/>(Isolated Zero-Config Testing)")]
+        OracleDB[("Oracle Database Free 23c/21c")]
+        SQLiteDB[("SQLite Engine")]
     end
 
     Client --> UI
@@ -63,381 +57,232 @@ flowchart TD
 
 ## 2. Technology Stack
 
-- **Backend Framework:** Python 3.12, Flask 3.0
-- **Database Engine:** Oracle Database Free (23c / 21c) via `python-oracledb` (Thin Mode, zero Oracle Instant Client requirement), with SQLite for zero-configuration testing.
-- **Database Programming:** ANSI SQL, Oracle SQL DDL/DML, PL/SQL Procedures, Functions, and Packages (`PKG_HEALTHCARE_REPORTING`).
-- **Data Analysis & Transformation:** Pandas 2.1+
-- **Business Intelligence & Dashboards:** Tableau Public / Tableau Desktop
-- **Testing & Quality Assurance:** Pytest 8.2 (55 automated tests passing with 100% pass rate)
-- **Frontend Interface:** HTML5, CSS3, JavaScript (ES6+), Bootstrap 5.3, FontAwesome 6, Chart.js 4.4
-- **Version Control:** Git & GitHub
+- **Backend:** Python 3.12, Flask 3.0
+- **Database:** Oracle Database Free (23c / 21c) via `python-oracledb` (Thin Mode), with SQLite fallback for local testing
+- **Database Programming:** SQL, PL/SQL (Procedures, Functions, Packages)
+- **Data Analysis:** Pandas 2.1+
+- **Business Intelligence:** Tableau Public
+- **Testing:** Pytest 8.2 (55 automated tests)
+- **Frontend:** HTML5, CSS3, JavaScript, Bootstrap 5.3, Chart.js
 
 ---
 
 ## 3. Core Functional Modules
 
 ### Module 1: Patient Management
-- Unique Medical Record Number generation (`MRN-10001` through `MRN-10025`).
-- Demographic intake: Date of birth (future dates disallowed), biological gender validation, phone, email, and emergency contact details.
-- Active state management with soft-delete capabilities.
-- Search indexing across patient name, MRN, and telephone.
+- Patient registration with automatic Medical Record Number (`MRN-XXXXX`) generation.
+- Demographic validation (date of birth verification, standardized gender, phone, email, emergency contact).
+- Unique constraints on MRN and email to prevent duplicate registrations.
+- Soft-deletion support (`is_active` flag) preserving historical medical integrity.
 
 ### Module 2: Appointment Management
-- Scheduling and calendar slot reservation.
-- **Provider Conflict Prevention:** Automated validation against overlapping physician bookings using composite constraints `(provider_id, appointment_datetime)`.
-- Controlled cancellation workflow requiring mandatory audit cancellation reasons.
-- Status tracking across `SCHEDULED`, `CONFIRMED`, `COMPLETED`, `CANCELLED`, and `NO_SHOW`.
+- Appointment scheduling, status tracking (`SCHEDULED`, `CONFIRMED`, `COMPLETED`, `CANCELLED`, `NO_SHOW`).
+- **Conflict Prevention:** Database-level composite constraint `(provider_id, appointment_datetime)` and application validation prevent overlapping bookings.
+- Cancellation workflow requiring mandatory cancellation reasons; completed appointments cannot be cancelled.
 
-### Module 3: Clinical Encounter Documentation
-- Clinician progress note recording (SOAP methodology).
-- Standardized diagnostic coding via ICD-10 (e.g., `I10` Essential Hypertension, `E11.9` Type 2 Diabetes, `M54.5` Low Back Pain).
-- Transactional synchronization: Recording an encounter automatically marks the associated appointment as `COMPLETED` and issues an initial billing charge.
+### Module 3: Clinical Encounter Management
+- Clinical documentation recording chief complaint, progress notes, and ICD-10 diagnostic codes.
+- Transactional linkage: Recording an encounter automatically updates the appointment to `COMPLETED` and queues initial billing charges.
 
-### Module 4: Billing & Revenue Cycle Management
-- Exact financial calculations using Python's `decimal.Decimal` quantized to two decimal places, eliminating IEEE 754 floating-point drift.
-- Payment processing: Overpayment prevention (`payment <= balance_due`), updating status to `PAID` or `PARTIALLY_PAID`.
-- Accounts receivable aging analysis categorizing balances into `Current`, `1-30 Days`, `31-60 Days`, `61-90 Days`, and `90+ Days Overdue`.
-
----
-
-## 4. Normalized Relational Schema
-
-```mermaid
-erDiagram
-    PROVIDERS ||--o{ APPOINTMENTS : "attends"
-    PROVIDERS ||--o{ ENCOUNTERS : "conducts"
-    PATIENTS ||--o{ APPOINTMENTS : "books"
-    PATIENTS ||--o{ ENCOUNTERS : "receives care"
-    PATIENTS ||--o{ BILLING_RECORDS : "billed to"
-    APPOINTMENTS ||--o| ENCOUNTERS : "fulfills"
-    ENCOUNTERS ||--o| BILLING_RECORDS : "generates charges"
-
-    PROVIDERS {
-        NUMBER provider_id PK
-        VARCHAR2 first_name
-        VARCHAR2 last_name
-        VARCHAR2 specialty
-        VARCHAR2 license_number UK
-        VARCHAR2 email UK
-        VARCHAR2 department
-    }
-
-    PATIENTS {
-        NUMBER patient_id PK
-        VARCHAR2 patient_mrn UK
-        VARCHAR2 first_name
-        VARCHAR2 last_name
-        DATE date_of_birth
-        VARCHAR2 gender
-        VARCHAR2 blood_group
-        VARCHAR2 phone
-        NUMBER is_active
-    }
-
-    APPOINTMENTS {
-        NUMBER appointment_id PK
-        NUMBER patient_id FK
-        NUMBER provider_id FK
-        DATE appointment_date
-        VARCHAR2 appointment_time
-        TIMESTAMP appointment_datetime
-        VARCHAR2 status
-        VARCHAR2 cancellation_reason
-    }
-
-    ENCOUNTERS {
-        NUMBER encounter_id PK
-        NUMBER appointment_id FK
-        NUMBER patient_id FK
-        NUMBER provider_id FK
-        VARCHAR2 encounter_type
-        VARCHAR2 chief_complaint
-        VARCHAR2 diagnosis_code
-        VARCHAR2 diagnosis_description
-    }
-
-    BILLING_RECORDS {
-        NUMBER bill_id PK
-        VARCHAR2 bill_number UK
-        NUMBER patient_id FK
-        NUMBER encounter_id FK
-        NUMBER total_amount
-        NUMBER paid_amount
-        NUMBER balance_due
-        VARCHAR2 status
-    }
-```
-
-Detailed schema specifications and constraints can be reviewed in [docs/database_design.md](docs/database_design.md).
+### Module 4: Billing Management
+- Exact financial calculations using Python's `Decimal` type to prevent binary floating-point drift.
+- Payment processing with overpayment checks (`payment_amount <= balance_due`).
+- Automatic status transitions (`PENDING`, `PARTIALLY_PAID`, `PAID`, `OVERDUE`).
+- Accounts receivable aging analysis across 30, 60, and 90+ day overdue brackets.
 
 ---
 
-## 5. SQL & PL/SQL Implementation
+## 4. Database Schema Design
 
-All database interactions use parameterized queries. The repository includes:
+The schema is normalized to Third Normal Form (3NF) and consists of five core tables:
 
-1. **`database/schema.sql`**: Full Oracle DDL with table creation, constraints, and indexes.
-2. **`database/views.sql`**: 5 analytical views (`VW_PATIENT_CLINICAL_SUMMARY`, `VW_MONTHLY_BILLING_SUMMARY`, `VW_APPOINTMENT_ANALYTICS`, `VW_PROVIDER_WORKLOAD`, `VW_OUTSTANDING_BALANCES`).
-3. **`database/functions.sql`**:
-   - `FN_CALC_OUTSTANDING_BALANCE`: Returns total unpaid balance for a given patient.
-   - `FN_VALIDATE_BILLING_AMOUNT`: Enforces monetary checks (`paid + balance == total`).
-   - `FN_GET_PROVIDER_UTILIZATION`: Calculates provider slot utilization percentage.
-4. **`database/procedures.sql`**:
-   - `SP_CANCEL_APPOINTMENT`: Atomic appointment cancellation with audit logging.
-   - `SP_RECORD_CLINICAL_ENCOUNTER`: Transaction linking encounter, appointment completion, and invoice generation.
-   - `SP_PROCESS_BILLING_PAYMENT`: Applies payments with exact balance reduction.
-5. **`database/packages.sql`**:
-   - `PKG_HEALTHCARE_REPORTING`: Oracle PL/SQL package managing operational report cursors and revenue calculations.
+1. `PROVIDERS`: Physician roster, specialties, license numbers, and departments.
+2. `PATIENTS`: Demographic data, contact details, and unique MRN.
+3. `APPOINTMENTS`: Booking schedules, duration, status, and cancellation metadata.
+4. `ENCOUNTERS`: Clinical observations, ICD-10 diagnoses, and physician SOAP notes.
+5. `BILLING_RECORDS`: Invoices, charges, payments received, and outstanding balances.
 
----
+### Key Constraints:
+- Nonnegative check constraints on all monetary columns (`total_amount >= 0`, `paid_amount >= 0`, `balance_due >= 0`).
+- Balance integrity rule: `paid_amount <= total_amount AND balance_due = total_amount - paid_amount`.
+- Provider slot constraint: `UNIQUE (provider_id, appointment_datetime)`.
 
-## 6. The 5 Operational Reports
-
-| # | Report Title | SQL Query File | Business Purpose | Output Fields |
-| :- | :--- | :--- | :--- | :--- |
-| **1** | **Monthly Billing Summary** | [reports/sql/monthly_billing.sql](reports/sql/monthly_billing.sql) | Track monthly collections, billing volume, and revenue realization rates. | `billing_month`, `total_bills`, `total_billed`, `total_collected`, `total_outstanding`, `collection_rate_pct`, `paid_count`, `pending_count`, `overdue_count` |
-| **2** | **Appointment Status & Cancellation** | [reports/sql/appointment_status.sql](reports/sql/appointment_status.sql) | Analyze clinic booking retention and department cancellation rates. | `department`, `total_scheduled`, `completed_count`, `cancelled_count`, `no_show_count`, `cancellation_rate_pct`, `reasons` |
-| **3** | **Longitudinal Patient Visit History** | [reports/sql/patient_visit_history.sql](reports/sql/patient_visit_history.sql) | Longitudinal timeline of patient encounters, diagnoses, doctors, and charges. | `patient_id`, `patient_mrn`, `encounter_date`, `encounter_type`, `attending_provider`, `diagnosis_code`, `bill_number`, `balance_due` |
-| **4** | **Provider Appointment Utilization** | [reports/sql/provider_utilization.sql](reports/sql/provider_utilization.sql) | Evaluate clinician workload, completion efficiency, and billable revenue. | `provider_name`, `department`, `total_scheduled`, `completed_appointments`, `cancelled_appointments`, `unique_patients`, `completion_rate_pct`, `total_revenue` |
-| **5** | **Outstanding Billing Aging Report** | [reports/sql/outstanding_billing.sql](reports/sql/outstanding_billing.sql) | Segment accounts receivable into 30, 60, and 90+ day aging buckets. | `bill_number`, `patient_name`, `patient_phone`, `due_date`, `total_amount`, `balance_due`, `days_overdue`, `aging_bucket` |
-
-All reports are accessible via REST API (`/api/reports/*`) and exportable to CSV via Pandas.
+Complete schema documentation and data dictionaries are available in [docs/database_design.md](docs/database_design.md).
 
 ---
 
-## 7. Interactive Tableau Public Dashboard
+## 5. SQL & PL/SQL Objects
 
-Synthetic data from the database is exported to `tableau/exports/full_synthetic_dataset.csv`.
+Database objects are organized in the `database/` directory:
 
-### Dashboard Visualizations Included:
-1. **Monthly Patient Visit Trends**: Dual-axis line chart tracking scheduled appointments vs completed clinical encounters.
-2. **Appointment Status Distribution**: Donut chart detailing appointment completion vs cancellation ratios.
-3. **Department Cancellation Rates**: Horizontal bar chart comparing scheduling retention across departments.
-4. **Monthly Billing Totals**: Triple-bar visualization comparing Total Billed, Collections, and Outstanding Receivables.
-5. **Outstanding Accounts Receivable Aging**: Treemap and distribution cards segmenting overdue balances.
-6. **Provider Utilization Efficiency**: Benchmark bullet chart comparing clinician utilization against the 80% hospital target.
-
-For complete step-by-step instructions and calculated fields, refer to [tableau/README.md](tableau/README.md).
+- **`database/schema.sql`**: Table definitions, primary/foreign keys, check constraints, and performance indexes.
+- **`database/views.sql`**: Analytical reporting views (`VW_PATIENT_CLINICAL_SUMMARY`, `VW_MONTHLY_BILLING_SUMMARY`, `VW_APPOINTMENT_ANALYTICS`, `VW_PROVIDER_WORKLOAD`, `VW_OUTSTANDING_BALANCES`).
+- **`database/functions.sql`**: `FN_CALC_OUTSTANDING_BALANCE`, `FN_VALIDATE_BILLING_AMOUNT`, `FN_GET_PROVIDER_UTILIZATION`.
+- **`database/procedures.sql`**: `SP_CANCEL_APPOINTMENT`, `SP_RECORD_CLINICAL_ENCOUNTER`, `SP_PROCESS_BILLING_PAYMENT`.
+- **`database/packages.sql`**: `PKG_HEALTHCARE_REPORTING` (package specification and body for cursor-based operational reporting).
 
 ---
 
-## 8. Automated Test Suite (Pytest)
+## 6. Operational Reports
 
-The test suite contains **55 automated tests** covering unit validations, service business logic, API routing, and database constraint enforcement.
+Five SQL-driven operational reports address hospital administrative requirements:
+
+| # | Report | SQL File | Objective |
+| :- | :--- | :--- | :--- |
+| **1** | **Monthly Billing Summary** | [reports/sql/monthly_billing.sql](reports/sql/monthly_billing.sql) | Summarizes monthly charges, collections, outstanding balances, and collection rates. |
+| **2** | **Appointment Status & Cancellation** | [reports/sql/appointment_status.sql](reports/sql/appointment_status.sql) | Analyzes appointment volumes, cancellation rates, and cancellation reasons by department. |
+| **3** | **Patient Visit History** | [reports/sql/patient_visit_history.sql](reports/sql/patient_visit_history.sql) | Longitudinal timeline of clinical encounters, diagnoses, providers, and invoice statuses. |
+| **4** | **Provider Utilization** | [reports/sql/provider_utilization.sql](reports/sql/provider_utilization.sql) | Measures clinician workload, appointment completion rates, and generated revenue. |
+| **5** | **Outstanding Billing Aging** | [reports/sql/outstanding_billing.sql](reports/sql/outstanding_billing.sql) | Identifies overdue receivables segmented into Current, 1-30, 31-60, 61-90, and 90+ days. |
+
+Reports are accessible through the web UI, REST API endpoints (`/api/reports/*`), and CSV export files in `reports/exports/`.
+
+---
+
+## 7. Tableau Public Dashboard
+
+Data exported from the database (`tableau/exports/full_synthetic_dataset.csv`) supports an interactive Tableau dashboard containing:
+
+- Monthly patient visit trends.
+- Appointment status distribution.
+- Department cancellation trends.
+- Monthly billing and collection totals.
+- Accounts receivable aging breakdown.
+- Provider utilization efficiency.
+
+Step-by-step instructions and calculated field formulas are detailed in [tableau/README.md](tableau/README.md).
+
+---
+
+## 8. REST API Reference
+
+The application provides a comprehensive REST API. Full documentation with JSON request/response examples is located in [docs/api_documentation.md](docs/api_documentation.md).
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/health` | Service health status and database engine info |
+| `GET` | `/api/patients` | List patients (paginated, search filter) |
+| `POST` | `/api/patients` | Register new patient |
+| `GET` | `/api/patients/<id>` | Get patient details |
+| `PUT` | `/api/patients/<id>` | Update patient information |
+| `DELETE`| `/api/patients/<id>` | Deactivate patient record |
+| `GET` | `/api/appointments` | Filter appointments by provider, date, or status |
+| `POST` | `/api/appointments` | Schedule appointment with conflict detection |
+| `PUT` | `/api/appointments/<id>/cancel` | Cancel appointment with reason |
+| `GET` | `/api/encounters` | List clinical encounters |
+| `POST` | `/api/encounters` | Record encounter and issue billing charge |
+| `GET` | `/api/billing` | List billing records |
+| `POST` | `/api/billing/<id>/payment` | Apply payment to invoice |
+| `GET` | `/api/reports/monthly-billing` | Monthly billing summary report |
+| `GET` | `/api/reports/appointment-status` | Appointment status and cancellation report |
+| `GET` | `/api/reports/patient-visit-history/<id>` | Patient visit history report |
+| `GET` | `/api/reports/provider-utilization` | Provider utilization report |
+| `GET` | `/api/reports/outstanding-billing` | Outstanding billing aging report |
+| `GET` | `/api/reports/export/<name>` | Export report data to CSV |
+| `GET` | `/api/dashboard/stats` | High-level KPI summary metrics |
+
+---
+
+## 9. Testing & Quality Assurance
+
+The test suite contains **55 automated tests** built with Pytest covering validation logic, service workflows, API endpoints, and database constraint enforcement.
 
 ```bash
-# Run the test suite
 pytest tests -v
 ```
 
-### Test Results Summary:
-```
-============================= test session starts =============================
-platform win32 -- Python 3.12.4, pytest-8.2.2, pluggy-1.6.0
-collected 55 items
+### Verified Test Categories:
+- **Unit Validation Tests (17 tests):** Input payloads, field limits, date validation, and exact `Decimal` arithmetic.
+- **Service Workflows (16 tests):** Patient registration, duplicate checks, conflict detection, cancellation rules, and payment processing.
+- **Integration & API Tests (17 tests):** Endpoint routing, HTTP status codes (`200`, `201`, `400`, `404`, `409`), and JSON serialization.
+- **Transactions & Constraints (5 tests):** Atomic transaction rollback on mid-operation failure, unique constraints, and check constraints.
 
-tests/integration/test_api_endpoints.py::test_health_check_endpoint PASSED        [  1%]
-tests/integration/test_api_endpoints.py::test_api_get_patients_paginated PASSED   [  3%]
-tests/integration/test_api_endpoints.py::test_api_register_patient_success PASSED [  5%]
-tests/integration/test_api_endpoints.py::test_api_register_patient_validation_error PASSED [  7%]
-tests/integration/test_api_endpoints.py::test_api_get_patient_by_id PASSED       [  9%]
-tests/integration/test_api_endpoints.py::test_api_get_patient_not_found PASSED   [ 10%]
-tests/integration/test_api_endpoints.py::test_api_schedule_appointment_success PASSED [ 12%]
-tests/integration/test_api_endpoints.py::test_api_schedule_appointment_conflict PASSED [ 14%]
-tests/integration/test_api_endpoints.py::test_api_cancel_appointment PASSED      [ 16%]
-tests/integration/test_api_endpoints.py::test_api_record_clinical_encounter PASSED [ 18%]
-tests/integration/test_api_endpoints.py::test_api_billing_payment PASSED         [ 20%]
-tests/integration/test_api_endpoints.py::test_api_report_monthly_billing PASSED  [ 21%]
-tests/integration/test_api_endpoints.py::test_api_report_appointment_status PASSED [ 23%]
-tests/integration/test_api_endpoints.py::test_api_report_provider_utilization PASSED [ 25%]
-tests/integration/test_api_endpoints.py::test_api_report_outstanding_billing PASSED [ 27%]
-tests/integration/test_api_endpoints.py::test_api_report_patient_visit_history PASSED [ 29%]
-tests/integration/test_api_endpoints.py::test_api_dashboard_stats PASSED         [ 30%]
-tests/integration/test_transactions_and_constraints.py::test_transaction_rollback_on_failure PASSED [ 32%]
-tests/integration/test_transactions_and_constraints.py::test_unique_mrn_constraint_enforced PASSED [ 34%]
-tests/integration/test_transactions_and_constraints.py::test_unique_provider_license_enforced PASSED [ 36%]
-tests/integration/test_transactions_and_constraints.py::test_billing_negative_amount_constraint_enforced PASSED [ 38%]
-tests/integration/test_transactions_and_constraints.py::test_billing_paid_exceeds_total_constraint_enforced PASSED [ 40%]
-tests/unit/test_appointment_service.py::test_schedule_appointment_success PASSED [ 41%]
-tests/unit/test_appointment_service.py::test_schedule_appointment_past_date_fails PASSED [ 43%]
-tests/unit/test_appointment_service.py::test_schedule_conflicting_appointment_fails PASSED [ 45%]
-tests/unit/test_appointment_service.py::test_cancel_appointment_success PASSED    [ 47%]
-tests/unit/test_appointment_service.py::test_cancel_completed_appointment_fails PASSED [ 49%]
-tests/unit/test_appointment_service.py::test_cancel_already_cancelled_appointment_fails PASSED [ 50%]
-tests/unit/test_billing_service.py::test_create_bill_success PASSED               [ 52%]
-tests/unit/test_billing_service.py::test_apply_payment_success PASSED             [ 54%]
-tests/unit/test_billing_service.py::test_apply_overpayment_fails PASSED           [ 56%]
-tests/unit/test_billing_service.py::test_apply_payment_to_fully_paid_bill_fails PASSED [ 58%]
-tests/unit/test_billing_service.py::test_patient_outstanding_balance_calculation PASSED [ 60%]
-tests/unit/test_decimal_utils.py::test_exact_decimal_conversion PASSED            [ 61%]
-tests/unit/test_decimal_utils.py::test_no_float_precision_leak PASSED             [ 63%]
-tests/unit/test_decimal_utils.py::test_calculate_balance PASSED                   [ 65%]
-tests/unit/test_decimal_utils.py::test_validate_billing_math_valid PASSED          [ 67%]
-tests/unit/test_decimal_utils.py::test_validate_billing_math_invalid_sum PASSED   [ 69%]
-tests/unit/test_decimal_utils.py::test_validate_billing_math_negative_total PASSED [ 70%]
-tests/unit/test_decimal_utils.py::test_validate_billing_math_paid_exceeds_total PASSED [ 72%]
-tests/unit/test_decimal_utils.py::test_format_currency PASSED                     [ 74%]
-tests/unit/test_patient_service.py::test_register_patient_service_success PASSED  [ 76%]
-tests/unit/test_patient_service.py::test_register_patient_duplicate_email PASSED  [ 78%]
-tests/unit/test_patient_service.py::test_get_nonexistent_patient_raises_404 PASSED [ 80%]
-tests/unit/test_patient_service.py::test_update_patient_service PASSED            [ 81%]
-tests/unit/test_patient_service.py::test_deactivate_patient_service PASSED        [ 83%]
-tests/unit/test_validators.py::test_valid_patient_payload PASSED                  [ 85%]
-tests/unit/test_validators.py::test_patient_future_dob_fails PASSED               [ 87%]
-tests/unit/test_validators.py::test_patient_invalid_gender_fails PASSED           [ 89%]
-tests/unit/test_validators.py::test_patient_invalid_email_fails PASSED            [ 90%]
-tests/unit/test_appointment_validator_success PASSED                              [ 92%]
-tests/unit/test_validators.py::test_appointment_invalid_time_fails PASSED        [ 94%]
-tests/unit/test_validators.py::test_encounter_validator_success PASSED            [ 96%]
-tests/unit/test_validators.py::test_billing_negative_amount_fails PASSED          [ 98%]
-tests/unit/test_validators.py::test_payment_zero_amount_fails PASSED              [100%]
-
-============================= 55 passed in 16.54s =============================
-```
+All 55 tests pass without warnings or errors.
 
 ---
 
-## 9. Setup & Quickstart Guide
+## 10. Setup & Execution
 
 ### Prerequisites
-- Python 3.10+ (tested on Python 3.12)
+- Python 3.10+
 - Git
-- Optional: Oracle Database Free 23c / 21c (if connecting to Oracle; otherwise SQLite mode is used automatically).
+- Optional: Oracle Database Free (23c / 21c). If Oracle is not configured, the application automatically uses SQLite.
 
-### Step 1: Clone Repository
-```bash
-git clone https://github.com/harsharaju1314-hash/Healthcare-Data-Management-and-Analytics-System.git
-cd Healthcare-Data-Management-and-Analytics-System
-```
+### Installation Steps
 
-### Step 2: Set Up Virtual Environment & Dependencies
-```bash
-python -m venv venv
-# Windows:
-.\venv\Scripts\activate
-# Linux/macOS:
-source venv/bin/activate
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/harsharaju1314-hash/Healthcare-Data-Management-and-Analytics-System.git
+   cd Healthcare-Data-Management-and-Analytics-System
+   ```
 
-pip install -r requirements.txt
-```
+2. **Create and activate virtual environment:**
+   ```bash
+   python -m venv venv
+   # Windows:
+   .\venv\Scripts\activate
+   # Linux/macOS:
+   source venv/bin/activate
+   ```
 
-### Step 3: Configure Environment Variables
-Copy `.env.example` to `.env`:
-```bash
-cp .env.example .env
-```
-To connect to an active Oracle Database Free instance, configure:
-```ini
-DB_ENGINE=oracle
-ORACLE_USER=healthcare_admin
-ORACLE_PASSWORD=your_password
-ORACLE_HOST=localhost
-ORACLE_PORT=1521
-ORACLE_SERVICE_NAME=FREEPDB1
-```
-*Note: If Oracle credentials are not set or Oracle is unreachable, the system automatically runs on SQLite with zero configuration.*
+3. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-### Step 4: Initialize Schema and Populate Seed Data
-```bash
-# Initialize tables, constraints, and indexes
-python scripts/init_db.py
+4. **Configure environment:**
+   ```bash
+   cp .env.example .env
+   ```
+   Edit `.env` to specify Oracle connection parameters if connecting to an Oracle instance. Otherwise, leave default settings for SQLite.
 
-# Populate 8 Providers, 25 Patients, 29 Appointments, 22 Encounters, and 22 Billing Records
-python scripts/seed_db.py
+5. **Initialize database schema:**
+   ```bash
+   python scripts/init_db.py
+   ```
 
-# Verify database health and record counts
-python scripts/test_db_connection.py
-```
+6. **Seed synthetic data:**
+   ```bash
+   python scripts/seed_db.py
+   ```
 
-### Step 5: Export Datasets for Tableau
-```bash
-python scripts/export_reports_to_csv.py
-```
+7. **Verify database connection and records:**
+   ```bash
+   python scripts/test_db_connection.py
+   ```
 
-### Step 6: Run Tests
-```bash
-pytest tests -v
-```
+8. **Generate report exports:**
+   ```bash
+   python scripts/export_reports_to_csv.py
+   ```
 
-### Step 7: Launch the Application
-```bash
-python run.py --port 5000
-```
-Open your browser and navigate to:
-- **Interactive UI Dashboard**: `http://localhost:5000`
-- **Patient Directory**: `http://localhost:5000/patients`
-- **Appointments Portal**: `http://localhost:5000/appointments`
-- **Clinical Encounters**: `http://localhost:5000/encounters`
-- **Billing & Invoices**: `http://localhost:5000/billing`
-- **Operational Reports**: `http://localhost:5000/reports`
-- **API Health Check**: `http://localhost:5000/api/health`
+9. **Run automated tests:**
+   ```bash
+   pytest tests -v
+   ```
+
+10. **Start the web application:**
+    ```bash
+    python run.py --port 5000
+    ```
+    Access the application at `http://localhost:5000`.
 
 ---
 
-## 10. Project Directory Structure
+## 11. Documentation Links
 
-```
-Healthcare-Data-Management-and-Analytics-System/
-├── app/
-│   ├── __init__.py               # Flask application factory & error handlers
-│   ├── routes/                   # REST API controllers & web views
-│   │   ├── patients.py           # Patient CRUD & balance endpoints
-│   │   ├── appointments.py       # Appointment booking & cancellation
-│   │   ├── encounters.py         # Clinical progress notes & charge linkage
-│   │   ├── billing.py            # Invoice management & decimal payments
-│   │   ├── reports.py            # Operational report endpoints & CSV download
-│   │   ├── dashboard.py          # KPI metrics
-│   │   ├── providers.py          # Physician roster
-│   │   └── system.py             # Health check & HTML templates routing
-│   ├── services/                 # Domain business logic & validation rules
-│   ├── repositories/             # Database access layer (Dual Oracle/SQLite)
-│   ├── schemas/                  # Request payload validation schemas
-│   ├── utils/                    # Decimal arithmetic, logging, response envelopes
-│   ├── static/                   # CSS styling & Chart.js dashboard scripts
-│   └── templates/                # Bootstrap 5 Jinja2 HTML templates
-├── database/
-│   ├── schema.sql                # Oracle DDL: Tables, constraints, indexes
-│   ├── seed_data.sql             # Oracle synthetic seed records
-│   ├── views.sql                 # Oracle analytical reporting views
-│   ├── procedures.sql            # Oracle PL/SQL stored procedures
-│   ├── functions.sql             # Oracle PL/SQL functions
-│   └── packages.sql              # Oracle PL/SQL PKG_HEALTHCARE_REPORTING
-├── reports/
-│   ├── sql/                      # Standalone SQL queries for the 5 reports
-│   └── exports/                  # Generated CSV reports
-├── tableau/
-│   ├── README.md                 # Step-by-step Tableau workbook guide
-│   └── exports/                  # Tableau Public ready CSV datasets
-├── tests/
-│   ├── conftest.py               # Isolated in-memory database test harness
-│   ├── unit/                     # Unit tests (validators, decimal math, services)
-│   └── integration/              # Integration tests (APIs, constraints, transactions)
-├── docs/
-│   ├── database_design.md        # Relational ERD & data dictionary
-│   ├── api_documentation.md      # REST API endpoints reference
-│   ├── healthcare_workflows.md   # Patient-to-billing lifecycle & Millennium comparison
-│   ├── root_cause_analysis.md    # 3 engineering defect investigations
-│   └── ccl_comparison.md         # Cerner Command Language educational analysis
-├── scripts/
-│   ├── init_db.py                # Schema initialization
-│   ├── seed_db.py                # Synthetic data seeder
-│   ├── run_plsql.py              # PL/SQL object compiler for Oracle
-│   ├── export_reports_to_csv.py  # Pandas CSV generator
-│   └── test_db_connection.py     # Database diagnostic check
-├── .env.example                  # Environment configuration template
-├── .gitignore                    # Git exclusions
-├── requirements.txt              # Python package requirements
-├── config.py                     # Configuration loader
-├── pytest.ini                    # Pytest configuration
-├── run.py                        # Application entry point
-└── README.md                     # Comprehensive project documentation
-```
+- [Database Design & Data Dictionary](docs/database_design.md)
+- [REST API Documentation](docs/api_documentation.md)
+- [Healthcare Workflows & Millennium Comparison](docs/healthcare_workflows.md)
+- [Cerner Command Language (CCL) vs. SQL/PL/SQL](docs/ccl_comparison.md)
+- [Engineering Root Cause Analysis](docs/root_cause_analysis.md)
+- [Tableau Dashboard Guide](tableau/README.md)
 
 ---
 
-## 11. Security & Data Integrity
+## 12. Security & Compliance Notes
 
-- **Synthetic Data Only**: All patient names, phone numbers, addresses, and diagnoses are fictional. No Protected Health Information (PHI) is stored or tracked.
-- **Zero Hardcoded Secrets**: Database credentials and secret keys are loaded exclusively through environment variables.
-- **SQL Injection Prevention**: All queries across repositories utilize strict parameterized binding.
-- **Safe Error Responses**: API error handlers return sanitized messages without leaking raw database tracebacks, file system paths, or credential details.
+- **Synthetic Data:** All patient records, physician names, and medical details are entirely fictional. No real Protected Health Information (PHI) is used.
+- **SQL Injection Prevention:** All SQL statements use parameterized queries across repositories.
+- **Credential Protection:** Secrets and database credentials are managed via environment variables and excluded from version control via `.gitignore`.
+- **Error Handling:** API error responses return sanitized messages without exposing database internals or stack traces.
