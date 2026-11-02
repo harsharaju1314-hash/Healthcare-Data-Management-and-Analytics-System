@@ -1,0 +1,317 @@
+{% extends "base.html" %}
+
+{% block title %}Operational Reports | HealthPulse Analytics{% endblock %}
+{% block page_heading %}Healthcare Operational & Clinical Reports{% endblock %}
+
+{% block content %}
+<div class="card mb-4">
+    <div class="card-header bg-white p-2">
+        <ul class="nav nav-pills card-header-pills" id="reportsTab" role="tablist">
+            <li class="nav-item">
+                <button class="nav-link active" id="billing-tab" data-bs-toggle="tab" data-bs-target="#billingTab" type="button">
+                    <i class="fa-solid fa-file-invoice-dollar me-2"></i>1. Monthly Billing
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="status-tab" data-bs-toggle="tab" data-bs-target="#statusTab" type="button">
+                    <i class="fa-solid fa-calendar-xmark me-2"></i>2. Appointment Status
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#historyTab" type="button">
+                    <i class="fa-solid fa-clock-rotate-left me-2"></i>3. Patient History
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="provider-tab" data-bs-toggle="tab" data-bs-target="#providerTab" type="button">
+                    <i class="fa-solid fa-user-doctor me-2"></i>4. Provider Utilization
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="aging-tab" data-bs-toggle="tab" data-bs-target="#agingTab" type="button">
+                    <i class="fa-solid fa-hourglass-half me-2"></i>5. Outstanding Aging
+                </button>
+            </li>
+        </ul>
+    </div>
+
+    <div class="card-body">
+        <div class="tab-content" id="reportsTabContent">
+            <!-- Tab 1: Monthly Billing -->
+            <div class="tab-pane fade show active" id="billingTab">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold mb-0">Report 1: Monthly Billing & Revenue Collection Summary</h6>
+                    <a href="/api/reports/export/monthly_billing" class="btn btn-sm btn-outline-success">
+                        <i class="fa-solid fa-file-csv me-1"></i>Export to CSV
+                    </a>
+                </div>
+                <div id="billingReportContainer" class="table-responsive">Loading...</div>
+            </div>
+
+            <!-- Tab 2: Appointment Status -->
+            <div class="tab-pane fade" id="statusTab">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold mb-0">Report 2: Appointment Volume, Cancellations & Department Breakdown</h6>
+                </div>
+                <div id="statusReportContainer">Loading...</div>
+            </div>
+
+            <!-- Tab 3: Patient Visit History -->
+            <div class="tab-pane fade" id="historyTab">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold mb-0">Report 3: Patient Longitudinal Clinical History</h6>
+                    <div class="d-flex gap-2">
+                        <input type="number" id="historyPatientId" class="form-control form-control-sm" placeholder="Enter Patient ID (e.g. 1)" style="width: 200px;">
+                        <button class="btn btn-sm btn-primary" onclick="loadPatientHistory()">Lookup</button>
+                    </div>
+                </div>
+                <div id="historyReportContainer">Enter a patient ID above to view clinical timeline.</div>
+            </div>
+
+            <!-- Tab 4: Provider Utilization -->
+            <div class="tab-pane fade" id="providerTab">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold mb-0">Report 4: Provider Clinical Workload & Utilization Rate</h6>
+                    <a href="/api/reports/export/provider_utilization" class="btn btn-sm btn-outline-success">
+                        <i class="fa-solid fa-file-csv me-1"></i>Export to CSV
+                    </a>
+                </div>
+                <div id="providerReportContainer" class="table-responsive">Loading...</div>
+            </div>
+
+            <!-- Tab 5: Outstanding Aging -->
+            <div class="tab-pane fade" id="agingTab">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold mb-0">Report 5: Accounts Receivable Aging Analysis</h6>
+                    <a href="/api/reports/export/outstanding_billing" class="btn btn-sm btn-outline-success">
+                        <i class="fa-solid fa-file-csv me-1"></i>Export to CSV
+                    </a>
+                </div>
+                <div id="agingReportContainer">Loading...</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    loadBillingReport();
+    loadStatusReport();
+    loadProviderReport();
+    loadAgingReport();
+
+    // Check query param for patient history
+    const urlParams = new URLSearchParams(window.location.search);
+    const pid = urlParams.get("patient_id");
+    if (pid) {
+        document.getElementById("historyPatientId").value = pid;
+        const tabEl = document.querySelector('#history-tab');
+        bootstrap.Tab.getInstance(tabEl) || new bootstrap.Tab(tabEl).show();
+        loadPatientHistory();
+    }
+});
+
+async function loadBillingReport() {
+    try {
+        const res = await apiRequest("/api/reports/monthly-billing");
+        const container = document.getElementById("billingReportContainer");
+        let html = `
+            <table class="table table-bordered table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Month</th>
+                        <th>Total Bills</th>
+                        <th>Total Billed</th>
+                        <th>Total Collected</th>
+                        <th>Balance Due</th>
+                        <th>Collection Rate</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        res.data.forEach(r => {
+            html += `
+                <tr>
+                    <td class="fw-bold">${r.billing_month}</td>
+                    <td>${r.total_bills}</td>
+                    <td>$${r.total_billed.toFixed(2)}</td>
+                    <td class="text-success">$${r.total_collected.toFixed(2)}</td>
+                    <td class="text-danger">$${r.total_outstanding.toFixed(2)}</td>
+                    <td><span class="badge bg-success">${r.collection_rate_pct}%</span></td>
+                </tr>
+            `;
+        });
+        html += `</tbody></table>`;
+        container.innerHTML = html;
+    } catch(e) {}
+}
+
+async function loadStatusReport() {
+    try {
+        const res = await apiRequest("/api/reports/appointment-status");
+        const container = document.getElementById("statusReportContainer");
+
+        let html = `<div class="row g-3">`;
+        html += `<div class="col-md-6"><h6 class="fw-bold text-muted small">Department Breakdown</h6><table class="table table-sm table-hover"><thead><tr><th>Department</th><th>Scheduled</th><th>Completed</th><th>Cancelled</th><th>Cancel %</th></tr></thead><tbody>`;
+        res.data.department_breakdown.forEach(d => {
+            html += `<tr><td><strong>${d.department}</strong></td><td>${d.total_scheduled}</td><td>${d.completed}</td><td>${d.cancelled}</td><td><span class="badge bg-danger">${d.cancellation_rate_pct}%</span></td></tr>`;
+        });
+        html += `</tbody></table></div>`;
+
+        html += `<div class="col-md-6"><h6 class="fw-bold text-muted small">Cancellation Reasons</h6><table class="table table-sm table-hover"><thead><tr><th>Reason</th><th>Count</th></tr></thead><tbody>`;
+        res.data.cancellation_reasons.forEach(c => {
+            html += `<tr><td>${c.reason}</td><td><span class="badge bg-secondary">${c.count}</span></td></tr>`;
+        });
+        html += `</tbody></table></div></div>`;
+
+        container.innerHTML = html;
+    } catch(e) {}
+}
+
+async function loadPatientHistory() {
+    const pid = document.getElementById("historyPatientId").value;
+    if (!pid) return;
+
+    try {
+        const res = await apiRequest(`/api/reports/patient-visit-history/${pid}`);
+        const container = document.getElementById("historyReportContainer");
+        const p = res.data.patient;
+
+        let html = `
+            <div class="alert alert-info d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <strong>${p.first_name} ${p.last_name}</strong> (MRN: ${p.patient_mrn}) | DOB: ${p.date_of_birth} | Phone: ${p.phone}
+                </div>
+                <span class="badge bg-primary">${res.data.encounters_count} Encounters Recorded</span>
+            </div>
+            <div class="timeline">
+        `;
+
+        if (res.data.timeline.length === 0) {
+            html += `<p class="text-muted">No encounters recorded for this patient.</p>`;
+        } else {
+            res.data.timeline.forEach(t => {
+                html += `
+                    <div class="card mb-3 border-start border-4 border-warning">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <h6 class="fw-bold mb-1">Encounter #${t.encounter_id} - ${t.encounter_type}</h6>
+                                <span class="small text-muted">${t.encounter_date}</span>
+                            </div>
+                            <div class="text-secondary small mb-2">Physician: Dr. ${t.provider_name} (${t.department})</div>
+                            <p class="mb-1"><strong>Diagnosis:</strong> <code>${t.diagnosis_code}</code> - ${t.diagnosis_description}</p>
+                            <p class="mb-1 text-muted small"><strong>Notes:</strong> ${t.clinical_notes}</p>
+                            ${t.bill_number ? `<div class="mt-2 pt-2 border-top small"><strong>Invoice:</strong> ${t.bill_number} | Billed: $${t.total_amount.toFixed(2)} | Balance Due: <span class="text-danger fw-bold">$${t.balance_due.toFixed(2)}</span></div>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+        }
+        html += `</div>`;
+        container.innerHTML = html;
+    } catch(e) {}
+}
+
+async function loadProviderReport() {
+    try {
+        const res = await apiRequest("/api/reports/provider-utilization");
+        const container = document.getElementById("providerReportContainer");
+        let html = `
+            <table class="table table-bordered table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Provider Name</th>
+                        <th>Department</th>
+                        <th>Specialty</th>
+                        <th>Scheduled</th>
+                        <th>Completed</th>
+                        <th>Cancelled</th>
+                        <th>Unique Patients</th>
+                        <th>Utilization Rate</th>
+                        <th>Revenue Generated</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        res.data.forEach(pr => {
+            html += `
+                <tr>
+                    <td class="fw-bold">Dr. ${pr.provider_name}</td>
+                    <td>${pr.department}</td>
+                    <td>${pr.specialty}</td>
+                    <td>${pr.total_appointments}</td>
+                    <td><span class="badge bg-success">${pr.completed_appointments}</span></td>
+                    <td><span class="badge bg-danger">${pr.cancelled_appointments}</span></td>
+                    <td>${pr.unique_patients}</td>
+                    <td><span class="badge bg-info text-dark">${pr.completion_rate_pct}%</span></td>
+                    <td class="fw-semibold text-success">$${pr.total_revenue_generated.toFixed(2)}</td>
+                </tr>
+            `;
+        });
+        html += `</tbody></table>`;
+        container.innerHTML = html;
+    } catch(e) {}
+}
+
+async function loadAgingReport() {
+    try {
+        const res = await apiRequest("/api/reports/outstanding-billing");
+        const container = document.getElementById("agingReportContainer");
+
+        let html = `
+            <div class="row g-3 mb-3">
+                <div class="col-md-4">
+                    <div class="card p-3 bg-danger-subtle text-danger border-danger">
+                        <span class="small fw-bold">Total Overdue Receivables</span>
+                        <h4 class="fw-bold mb-0">$${res.data.total_outstanding_amount.toFixed(2)}</h4>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="card p-3">
+                        <span class="small fw-bold text-muted mb-2">Aging Distribution</span>
+                        <div class="d-flex flex-wrap gap-2">
+                            ${res.data.aging_distribution.map(a => `
+                                <div class="badge bg-light text-dark border p-2">
+                                    <span class="d-block text-secondary small">${a.aging_bucket}</span>
+                                    <span class="fw-bold text-danger">$${a.total_outstanding.toFixed(2)} (${a.invoice_count} bills)</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <h6 class="fw-bold text-muted small mb-2">Delinquent Invoices List</h6>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Bill #</th>
+                            <th>Patient</th>
+                            <th>Phone</th>
+                            <th>Due Date</th>
+                            <th>Balance Due</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${res.data.overdue_invoices.map(i => `
+                            <tr>
+                                <td><code>${i.bill_number}</code></td>
+                                <td><strong>${i.patient_name}</strong> (${i.patient_mrn})</td>
+                                <td>${i.patient_phone}</td>
+                                <td>${i.due_date}</td>
+                                <td class="fw-bold text-danger">$${i.balance_due.toFixed(2)}</td>
+                                <td><span class="badge bg-danger">${i.status}</span></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+        container.innerHTML = html;
+    } catch(e) {}
+}
+</script>
+{% endblock %}

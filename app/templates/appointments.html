@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+
+{% block title %}Appointments | HealthPulse Analytics{% endblock %}
+{% block page_heading %}Appointment Scheduling & Utilization{% endblock %}
+
+{% block content %}
+<div class="card p-3 mb-4">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div class="d-flex gap-2">
+            <select id="statusFilter" class="form-select" onchange="loadAppointments()">
+                <option value="">All Statuses</option>
+                <option value="SCHEDULED">Scheduled</option>
+                <option value="CONFIRMED">Confirmed</option>
+                <option value="COMPLETED">Completed</option>
+                <option value="CANCELLED">Cancelled</option>
+                <option value="NO_SHOW">No Show</option>
+            </select>
+        </div>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#scheduleApptModal">
+            <i class="fa-regular fa-calendar-plus me-1"></i>Schedule Appointment
+        </button>
+    </div>
+</div>
+
+<div class="card p-3">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Appt ID</th>
+                    <th>Date & Time</th>
+                    <th>Patient</th>
+                    <th>Attending Provider</th>
+                    <th>Specialty</th>
+                    <th>Reason</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="apptsTableBody">
+                <tr>
+                    <td colspan="8" class="text-center py-4 text-muted">Loading appointments...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal: Schedule Appointment -->
+<div class="modal fade" id="scheduleApptModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Schedule New Appointment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="scheduleApptForm" onsubmit="handleScheduleAppt(event)">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Patient ID *</label>
+                        <input type="number" name="patient_id" class="form-control" required placeholder="e.g. 1">
+                        <div class="form-text">Enter registered patient ID.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Provider *</label>
+                        <select name="provider_id" class="form-select" required>
+                            <option value="">Choose physician...</option>
+                            {% for pr in providers %}
+                            <option value="{{ pr.provider_id }}">Dr. {{ pr.first_name }} {{ pr.last_name }} ({{ pr.specialty }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Date *</label>
+                            <input type="date" name="appointment_date" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Time Slot *</label>
+                            <input type="text" name="appointment_time" class="form-control" required placeholder="09:00" pattern="^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Duration (Minutes)</label>
+                        <select name="duration_minutes" class="form-select">
+                            <option value="15">15 Minutes</option>
+                            <option value="30" selected>30 Minutes</option>
+                            <option value="45">45 Minutes</option>
+                            <option value="60">60 Minutes</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Reason for Visit *</label>
+                        <textarea name="reason_for_visit" class="form-control" rows="2" required maxlength="255"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Book Appointment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Cancel Appointment -->
+<div class="modal fade" id="cancelApptModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold text-danger">Cancel Appointment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="cancelApptForm" onsubmit="handleCancelAppt(event)">
+                <input type="hidden" id="cancelApptId" name="appointment_id">
+                <div class="modal-body">
+                    <p>Are you sure you want to cancel this appointment?</p>
+                    <div class="mb-3">
+                        <label class="form-label">Cancellation Reason *</label>
+                        <textarea id="cancelReasonInput" name="cancellation_reason" class="form-control" rows="3" required placeholder="State patient or clinic reason..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-danger">Confirm Cancellation</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    loadAppointments();
+});
+
+async function loadAppointments() {
+    const status = document.getElementById("statusFilter").value;
+    const url = status ? `/api/appointments?status=${status}&page_size=50` : `/api/appointments?page_size=50`;
+
+    try {
+        const res = await apiRequest(url);
+        const tbody = document.getElementById("apptsTableBody");
+        tbody.innerHTML = "";
+
+        if (!res.data || res.data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">No appointments found.</td></tr>';
+            return;
+        }
+
+        res.data.forEach(a => {
+            const badgeClass = {
+                "SCHEDULED": "badge-scheduled",
+                "CONFIRMED": "badge-confirmed",
+                "COMPLETED": "badge-completed",
+                "CANCELLED": "badge-cancelled",
+                "NO_SHOW": "badge-no-show",
+            }[a.status] || "bg-secondary";
+
+            const canCancel = a.status !== 'CANCELLED' && a.status !== 'COMPLETED';
+
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td>#${a.appointment_id}</td>
+                <td><strong>${a.appointment_date}</strong> <span class="text-muted small">${a.appointment_time}</span></td>
+                <td>${a.patient_name} <span class="text-muted small">(${a.patient_mrn})</span></td>
+                <td>Dr. ${a.provider_name}</td>
+                <td><span class="badge bg-light text-dark border">${a.provider_specialty}</span></td>
+                <td>${a.reason_for_visit}</td>
+                <td><span class="badge ${badgeClass}">${a.status}</span></td>
+                <td>
+                    ${canCancel ? `<button class="btn btn-sm btn-outline-danger" onclick="openCancelModal(${a.appointment_id})"><i class="fa-solid fa-ban me-1"></i>Cancel</button>` : `<span class="text-muted small">Locked</span>`}
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    } catch (e) {}
+}
+
+async function handleScheduleAppt(event) {
+    event.preventDefault();
+    const form = event.target;
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+
+    try {
+        await apiRequest("/api/appointments?allow_past=true", {
+            method: "POST",
+            body: JSON.stringify(data),
+        });
+        showAlert("Appointment booked successfully!", "success");
+        bootstrap.Modal.getInstance(document.getElementById("scheduleApptModal")).hide();
+        form.reset();
+        loadAppointments();
+    } catch (e) {}
+}
+
+function openCancelModal(id) {
+    document.getElementById("cancelApptId").value = id;
+    document.getElementById("cancelReasonInput").value = "";
+    new bootstrap.Modal(document.getElementById("cancelApptModal")).show();
+}
+
+async function handleCancelAppt(event) {
+    event.preventDefault();
+    const apptId = document.getElementById("cancelApptId").value;
+    const reason = document.getElementById("cancelReasonInput").value;
+
+    try {
+        await apiRequest(`/api/appointments/${apptId}/cancel`, {
+            method: "PUT",
+            body: JSON.stringify({ cancellation_reason: reason }),
+        });
+        showAlert("Appointment cancelled.", "success");
+        bootstrap.Modal.getInstance(document.getElementById("cancelApptModal")).hide();
+        loadAppointments();
+    } catch (e) {}
+}
+</script>
+{% endblock %}

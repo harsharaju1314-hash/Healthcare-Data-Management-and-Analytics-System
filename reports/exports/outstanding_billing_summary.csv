@@ -1,0 +1,9 @@
+bill_id,bill_number,patient_id,patient_mrn,patient_name,patient_phone,patient_email,billing_date,due_date,total_amount,paid_amount,balance_due,status
+4,INV-20260120-00004,5,MRN-10005,Liam Brown,555-1005,liam.b@fakeemail.com,2026-01-20,2026-02-20,400.0,200.0,200.0,PARTIALLY_PAID
+9,INV-20260210-00009,11,MRN-10011,William Harris,555-1011,william.h@fakeemail.com,2026-02-10,2026-03-10,850.0,500.0,350.0,PARTIALLY_PAID
+10,INV-20260212-00010,12,MRN-10012,Isabella Martin,555-1012,isabella.m@fakeemail.com,2026-02-12,2026-03-12,175.0,0.0,175.0,OVERDUE
+11,INV-20260216-00011,13,MRN-10013,James Thompson,555-1013,james.t@fakeemail.com,2026-02-16,2026-03-16,450.0,0.0,450.0,OVERDUE
+13,INV-20260223-00013,15,MRN-10015,Benjamin Martinez,555-1015,ben.m@fakeemail.com,2026-02-23,2026-03-23,280.0,100.0,180.0,OVERDUE
+18,INV-20260320-00018,21,MRN-10021,Alexander Walker,555-1021,alex.w@fakeemail.com,2026-03-20,2026-04-20,140.0,0.0,140.0,PENDING
+20,INV-20260402-00020,23,MRN-10023,Daniel Allen,555-1023,daniel.a@fakeemail.com,2026-04-02,2026-05-02,920.0,500.0,420.0,PARTIALLY_PAID
+22,INV-20260410-00022,25,MRN-10025,Matthew King,555-1025,matthew.k@fakeemail.com,2026-04-10,2026-05-10,380.0,0.0,380.0,PENDING

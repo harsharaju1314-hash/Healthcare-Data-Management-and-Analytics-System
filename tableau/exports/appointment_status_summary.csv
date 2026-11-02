@@ -1,0 +1,9 @@
+department,total_scheduled,completed,cancelled,no_show,cancellation_rate_pct
+Internal Medicine,6,5,0,0,0.0
+Cardiovascular,6,4,1,0,16.67
+Orthopedic Surgery,5,3,1,0,20.0
+Dermatology,4,2,1,0,25.0
+Women's Health,2,2,0,0,0.0
+Pediatric Medicine,2,2,0,0,0.0
+Neurosciences,2,2,0,0,0.0
+Cancer Center,2,2,0,0,0.0
