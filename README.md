@@ -4,7 +4,7 @@ A comprehensive healthcare data management and analytics application simulating 
 
 ---
 
-### Technology Stack
+### Core Technologies & Infrastructure
 
 [![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Flask 3.0](https://img.shields.io/badge/Flask-3.0_Application_Factory-000000?style=for-the-badge&logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
@@ -15,7 +15,7 @@ A comprehensive healthcare data management and analytics application simulating 
 [![Pytest](https://img.shields.io/badge/Pytest-55_Automated_Tests-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white)](https://pytest.org/)
 [![Bootstrap 5](https://img.shields.io/badge/Bootstrap-5.3_Responsive_UI-7952B3?style=for-the-badge&logo=bootstrap&logoColor=white)](https://getbootstrap.com/)
 
-| Architectural Tier | Technologies | Implementation Details |
+| Architectural Tier | Platform Component | Implementation Specification |
 | :--- | :--- | :--- |
 | **Backend Framework** | **Python 3.12**, **Flask 3.0** | Clean Architecture, Repository Pattern, Application Factory, Parameterized RESTful routing, custom exception middleware |
 | **Database Engine** | **Oracle Database Free (23c / 21c)**, **`python-oracledb`** | Native Thin Mode connectivity, Identity Sequences, Composite Unique Constraints, Check Constraints, B-Tree Indexes |
